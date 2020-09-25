@@ -49,27 +49,28 @@ objects:
 # This ensures that the applicant appears in the household_members.table.
 mandatory: True
 code: |
+  error_message = ""
   if owns_property:
-    if owns_multiple_properties or not resides_in_property or property_annual_value > 13000:
+    if owns_multiple_properties or not resides_in_property:
+      error_message = "You must not own any other property besides your place of residence."
+      ineligible_page
+    if property_annual_value > 13000:
+      error_message = "The annual value of your place of residence is too high."
       ineligible_page
   
   if applicant.age_in_years() > 60:
     if savings_value > 40000:
+      error_message = "Your savings and investments have exceeded the maximum allowed threshold."
       ineligible_page
   else: 
     if savings_value > 10000:
+      error_message = "Your savings and investments exceed the maximum allowed threshold."
       ineligible_page
-
+  
+  applicant.nric = applicant.nric.upper()
   household_members.append(applicant)
   
-  # create a list of the family members' incomes
-  income_list = []
-  for member in household_members:
-    income_list.append(member.income)
   
-  if pchi(income_list) > 650:
-    ineligible_page
-  eligible_page
 ---
 # DO NOT MODIFY THIS BLOCK OR MOVE IT
 mandatory: True
@@ -81,8 +82,18 @@ code: |
 # Use this block to write code that calculates the average PCHI
 mandatory: True
 code: |
-  def pchi(income_list):
-    return
+  income_list = []
+  for member in household_members:
+    income_list.append(member.income)
+  
+  total_income = 0
+  for income in income_list: 
+    total_income += income
+  
+  if total_income / (len(income_list) * 12) > 650:
+    error_message = "Your average per capita monthly household income is too high."
+    ineligible_page
+  eligible_page
 ---
 # DO NOT MODIFY THIS BLOCK
 table: household_members.table
@@ -147,6 +158,8 @@ fields:
     datatype: currency
     min: 0
     show if: resides_in_property
+    help: |
+      The Annual Value of a residential property is the estimated gross annual rent that a homeowner can collect if he/she rents out the property. This is excluding furnishings, furniture and maintenance fees.
 ---
 question: |
   Savings Information
@@ -180,6 +193,14 @@ fields:
 event: ineligible_page
 question: |
   Sorry, you do not qualify for legal aid. 
+subquestion: |
+  ${error_message}
+  
+  
+  [You may view all the requirements of the means test here.](https://lab.mlaw.gov.sg/legal-services/taking-the-means-test/)
+  
+  If you fail the means test but you have certain reasons or information that you think makes your situation different or special, for example if you have a very serious illness and cannot afford legal services as you need to pay for major medical procedures, you may [contact the MinLaw Services Centre](https://eservices.mlaw.gov.sg/enquiry/) for further assistance.
+
 buttons:
   - Exit: exit
   - Restart: restart
@@ -187,4 +208,11 @@ buttons:
 event: eligible_page
 question: |
   You qualify for legal aid.
-button
+action buttons:
+  - label: Register for legal aid with the Legal Aid Bureau(Requires Singpass login)
+    action: https://eservices.mlaw.gov.sg/labesvc/common/loginViaSingPass.do?portal=AP&pageStatus=CHECK_STATUS_CASE
+    color: warning
+    icon: sign-out-alt
+buttons: 
+  - Exit: exit
+    
