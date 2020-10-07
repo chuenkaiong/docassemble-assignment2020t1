@@ -25,7 +25,7 @@ def is_valid_checksum(nric):
     checksum = 0
     for i in range(len(d1_to_d7)):
         checksum += int(d1_to_d7[i]) * num_arr[i]
-    d = d0 + checksum % 11
+    d = (d0 + checksum) % 11
 
     if nric[0] in "ST":
         check_char_list = "JZIHGFEDCBA"
